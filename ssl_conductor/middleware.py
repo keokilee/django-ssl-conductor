@@ -7,13 +7,20 @@ SSL_ALWAYS = getattr(settings, 'SSL_ALWAYS', False)
 HTTPS_PATHS = getattr(settings, 'HTTPS_PATHS', [])
 SSL_PORT = getattr(settings, 'SSL_PORT', None)
 SSL_KW = 'SSL'
+SSL_ALLOW_AJAX = getattr(settings, 'SSL_ALLOW_AJAX', False)
 
 
 class SSLRedirectMiddleware:
     def process_view(self, request, view_func, view_args, view_kwargs):
-        response_is_secure = self._response_is_secure(request, view_func, view_args, view_kwargs)
-        if response_is_secure != self._request_is_secure(request):
-            return self._redirect(request, response_is_secure)
+        if not self._allow_ajax(request):
+            response_is_secure = self._response_is_secure(
+                                    request, view_func, view_args, view_kwargs)
+
+            if response_is_secure != self._request_is_secure(request):
+                return self._redirect(request, response_is_secure)
+
+    def _allow_ajax(self, request):
+        return SSL_ALLOW_AJAX and request.is_ajax() and request.method == "GET"
 
     def _response_is_secure(self, request, view_func, view_args, view_kwargs):
         if not SSL_ON:
